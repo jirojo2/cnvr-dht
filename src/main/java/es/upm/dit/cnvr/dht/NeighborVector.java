@@ -170,36 +170,36 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 	}
 	
 	private class IteratorAggregator<E> implements Iterator<E> {
-        LinkedList<Iterator<E>> internalIterators = new LinkedList<>();
-        Iterator<E> crtIterator = null;
+		LinkedList<Iterator<E>> internalIterators = new LinkedList<>();
+		Iterator<E> crtIterator = null;
 
-        public IteratorAggregator(LinkedList<Iterator<E>> iterators) {
-            internalIterators.addAll(iterators);
-        }
+		public IteratorAggregator(LinkedList<Iterator<E>> iterators) {
+			internalIterators.addAll(iterators);
+		}
 
-        @Override
-        public boolean hasNext() {
-            return (crtIterator != null && crtIterator.hasNext()) ||
-                    (!internalIterators.isEmpty() && internalIterators.getFirst().hasNext()) ;
-        }
+		@Override
+		public boolean hasNext() {
+			return (crtIterator != null && crtIterator.hasNext()) ||
+					(!internalIterators.isEmpty() && internalIterators.getFirst().hasNext()) ;
+		}
 
-        @Override
-        public E next() {
-            if (crtIterator != null && crtIterator.hasNext()) {
-                return crtIterator.next();
-            }
+		@Override
+		public E next() {
+			if (crtIterator != null && crtIterator.hasNext()) {
+				return crtIterator.next();
+			}
 
-            if (!internalIterators.isEmpty()) {
-                crtIterator = internalIterators.pollFirst();
-                return crtIterator.next();
-            }
+			if (!internalIterators.isEmpty()) {
+				crtIterator = internalIterators.pollFirst();
+				return crtIterator.next();
+			}
 
-            throw new NoSuchElementException();
-        }
+			throw new NoSuchElementException();
+		}
 
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
+	}
 }
