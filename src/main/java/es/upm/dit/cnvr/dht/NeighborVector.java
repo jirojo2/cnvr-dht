@@ -5,10 +5,12 @@ import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-public class NeighborVector implements Iterable<Node<DHT>> {
+import org.jgroups.Address;
 
-	private LinkedList<Node<DHT>> cwLeaf = new LinkedList<>();
-	private LinkedList<Node<DHT>> ccwLeaf = new LinkedList<>();
+public class NeighborVector implements Iterable<Node<Address>> {
+
+	private LinkedList<Node<Address>> cwLeaf = new LinkedList<>();
+	private LinkedList<Node<Address>> ccwLeaf = new LinkedList<>();
 	private int reference;
 	
 	public NeighborVector(int reference) {
@@ -16,7 +18,7 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 		this.reference = reference;
 	}
 	
-	private int calculateDistanceCW(int a, int b) {		
+	private int calculateDistanceCW(int a, int b) {
 		int d = b - a;
 		if (d < 0) {
 			d += DHT.KEYSPACE_SIZE;
@@ -44,7 +46,7 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 		return ccwLeaf.getLast().getKey();
 	}
 	
-	public Node<DHT> first() {
+	public Node<Address> first() {
 		return ccwLeaf.getLast();
 	}
 
@@ -52,12 +54,12 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 		return cwLeaf.getLast().getKey();
 	}
 	
-	public Node<DHT> last() {
+	public Node<Address> last() {
 		return cwLeaf.getLast();
 	}
 	
 	public boolean containsKey(int k) {
-		for (Node<DHT> node : this) {
+		for (Node<Address> node : this) {
 			if (node.getKey() == k) {
 				return true;
 			}
@@ -65,8 +67,8 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 		return false;
 	}
 	
-	public Node<DHT> get(int k) {
-		for (Node<DHT> node : this) {
+	public Node<Address> get(int k) {
+		for (Node<Address> node : this) {
 			if (node.getKey() == k) {
 				return node;
 			}
@@ -78,7 +80,7 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 		return cwLeaf.size() + ccwLeaf.size();
 	}
 	
-	public boolean add(Node<DHT> node) {
+	public boolean add(Node<Address> node) {
 		// Necesitamos saber dónde lo añadimos
 		// Tenemos dos segmentos, CCW y CW, cada uno de longitud DHT.L
 		
@@ -110,10 +112,10 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 		if (cw) {
 			int dist = calculateDistanceCW(reference, node.getKey());
 			int d = Integer.MAX_VALUE;
-			ListIterator<Node<DHT>> i = cwLeaf.listIterator();
+			ListIterator<Node<Address>> i = cwLeaf.listIterator();
 			while (i.hasNext()) {
 				int idx = i.nextIndex();
-				Node<DHT> n = i.next();
+				Node<Address> n = i.next();
 				d = calculateDistanceCW(n.getKey(), node.getKey());
 				if (dist < d) {
 					cwLeaf.add(idx, node);
@@ -133,10 +135,10 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 		else {
 			int dist = calculateDistanceCCW(reference, node.getKey());
 			int d = Integer.MAX_VALUE;
-			ListIterator<Node<DHT>> i = ccwLeaf.listIterator();
+			ListIterator<Node<Address>> i = ccwLeaf.listIterator();
 			while (i.hasNext()) {
 				int idx = i.nextIndex();
-				Node<DHT> n = i.next();
+				Node<Address> n = i.next();
 				d = calculateDistanceCCW(n.getKey(), node.getKey());
 				if (dist < d) {
 					ccwLeaf.add(idx, node);
@@ -158,10 +160,10 @@ public class NeighborVector implements Iterable<Node<DHT>> {
 	}
 
 	@Override
-	public Iterator<Node<DHT>> iterator() {
+	public Iterator<Node<Address>> iterator() {
 		// Iterate over two segments
 		// First segment (CCW) is reversed, the second (CW) is normal
-		LinkedList<Iterator<Node<DHT>>> iterators = new LinkedList<>();
+		LinkedList<Iterator<Node<Address>>> iterators = new LinkedList<>();
 		if (!ccwLeaf.isEmpty())
 			iterators.add(ccwLeaf.descendingIterator());
 		if (!cwLeaf.isEmpty())

@@ -1,19 +1,114 @@
 package es.upm.dit.cnvr.dht;
 
+import java.security.spec.EllipticCurve;
 import java.util.HashMap;
+import org.jgroups.Address;
+import org.jgroups.JChannel;
+import org.jgroups.Message;
+import org.jgroups.ReceiverAdapter;
+import org.jgroups.View;
 
-public class DHT {
+public class DHT extends ReceiverAdapter {
 	public static final int KEYSPACE_SIZE = 64;
 	public static final int L = 2;
 	
-	private Node<DHT> node;
+	private static final String JGROUPS_CLUSTER = "DHT-CNVR";
+
+	private JChannel channel;
+	private Address address;
+
+	private Node<Address> node;
 	
+	private Data requestingData;
+
 	private NeighborVector neighbors;
 	private HashMap<Integer, Data> dataset = new HashMap<>();
 	
-	public DHT() {
-		this.node = new Node<DHT>(this);
+	public DHT() throws Exception {
+		channel = new JChannel();
+		channel.setReceiver(this);
+		this.address = channel.getAddress();
+		this.node = new Node<Address>(address);
 		this.neighbors = new NeighborVector(this.node.getKey());
+		channel.connect(JGROUPS_CLUSTER);
+	}
+
+	public void close() {
+		channel.close();
+	}
+
+	public void viewAccepted(View new_view) {
+		System.out.println("** view: " + new_view);
+	}
+
+	private void handle(PacketSetData pkt) {
+		dataset.put(pkt.getKey(), pkt.getData());
+	}
+
+	private void handle(PacketStep pkt) {
+		if (pkt.isLocal())
+			putDataHere(pkt.getData());
+		else
+			putData(pkt.getData());
+	}
+
+	private void handle(PacketDataRequest pkt) {
+		if (pkt.getDst() == null || pkt.getDst().equals(address)) {
+			Data data = getData(pkt.getKey());
+			if (data != null) {
+				requestingData = data;
+			}
+		}
+	}
+
+	private void handle(PacketDataResponse pkt) {
+		if (pkt.getDst() == null || pkt.getDst().equals(address)) {
+			requestingData = pkt.getData();
+		}
+	}
+
+	private void handle(PacketAddNode pkt) {
+		addNode(pkt.getNode());
+	}
+
+	public void receive(Message msg) {
+		System.out.println(msg.getSrc() + ": " + msg.getObject());
+
+		Packet pkt = (Packet) msg.getObject();
+		if (pkt.getDst() != null && !pkt.getDst().equals(address)) {
+			// ignoramos el paquete, no va para nosotros
+			return;
+		}
+
+		// Packet handler
+		switch (pkt.getId()) {
+			case PacketSetData.ID:
+				handle((PacketSetData) pkt);
+				break;
+			case PacketStep.ID:
+				handle((PacketStep) pkt);
+				break;
+			case PacketDataRequest.ID:
+				handle((PacketDataRequest) pkt);
+				break;
+			case PacketDataResponse.ID:
+				handle((PacketDataResponse) pkt);
+				break;
+			case PacketAddNode.ID:
+				handle((PacketAddNode) pkt);
+				break;
+			default:
+				System.out.println("Unknown packet with ID " + pkt.getId());
+		}
+	}
+
+	private void send(Packet pkt) {
+		try {
+			Message msg = new Message(pkt.getDst(), null, pkt);
+			channel.send(msg);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	DHT forceKey(int key) {
@@ -29,9 +124,8 @@ public class DHT {
 		dataset.put(k, data);
 		
 		// replicar en vecinos (realmente enviamos un mensaje a cada nodo vecino)
-		for (Node<DHT> neighbor : neighbors) {
-			DHT neighborDHT = neighbor.getAddress();
-			neighborDHT.dataset.put(k, data);
+		for (Node<Address> neighbor : neighbors) {
+			send(new PacketSetData(address, neighbor.getAddress(), k, data));
 		}
 	}
 	
@@ -51,13 +145,13 @@ public class DHT {
 		}
 		
 		StringBuffer buffer = new StringBuffer();
-		for (Node<DHT> node : this.neighbors) {
+		for (Node<Address> node : this.neighbors) {
 			buffer.append(node.getKey() + ", ");
 		}
 		return "[ " + buffer.substring(0, buffer.length()-2) + " ]";
 	}
 	
-	public Node<DHT> getNode() {
+	public Node<Address> getNode() {
 		return this.node;
 	}
 	
@@ -74,26 +168,24 @@ public class DHT {
 		}
 		else if (neighbors.containsKey(k)) {
 			// escurrimos el bulto
-			DHT neighborDHT = neighbors.get(k).getAddress();
-			neighborDHT.putData(data);
+			send(new PacketStep(address, neighbors.get(k).getAddress(), k, data));
 		}
 		else if (l_low < k && k < l_high) {
 			// escurrimos el bulto
-			DHT nearest = this;
+			Address nearest = address;
 			int mindist = Math.abs(node.getKey() - k);
-			for (Node<DHT> neighbor : neighbors) {
+			for (Node<Address> neighbor : neighbors) {
 				int dist = Math.abs(neighbor.getKey() - k);
 				if (dist < mindist) {
 					nearest = neighbor.getAddress();
 					mindist = dist;
 				}
 			}
-			nearest.putDataHere(data);
+			send(new PacketStep(address, nearest, k, data, true));
 		}
 		else {
 			// escurrimos el bulto
-			DHT neighborDHT = neighbors.last().getAddress();
-			neighborDHT.putData(data);
+			send(new PacketStep(address, neighbors.last().getAddress(), k, data));
 		}
 	}
 	
@@ -108,12 +200,18 @@ public class DHT {
 		}
 		else {
 			// escurrimos el bulto
-			DHT neighborDHT = neighbors.last().getAddress();
-			return neighborDHT.getData(key);			
+			requestingData = null;
+			send(new PacketDataRequest(address, neighbors.last().getAddress(), key));
+			while (requestingData == null) {
+				try {
+					Thread.sleep(200);
+				} catch (Exception e) { }
+			}
+			return requestingData;
 		}
 	}
 	
-	public void addNode(Node<DHT> node) {
+	public void addNode(Node<Address> node) {
 
 		int k = node.getKey();
 
@@ -126,46 +224,29 @@ public class DHT {
 			// es vecino seguro
 			System.out.println("  es vecino seguro");
 			neighbors.add(node);
-			node.getAddress().addNode(this.node);
+			send(new PacketAddNode(address, node.getAddress(), this.node));
 			
 			// avisamos a cada vecino
-			for (Node<DHT> neighbor : neighbors) {
-				DHT neighborDHT = neighbor.getAddress();
-				neighborDHT.addNode(node);
+			for (Node<Address> neighbor : neighbors) {
+				send(new PacketAddNode(address, neighbor.getAddress(), node));
 			}
 		}
 		else if (isKeyBetween(neighbors.firstKey(), neighbors.lastKey(), k)) {
 			// reemplazamos a un vecino, se complica la cosa
 			System.out.println("  reemplazamos a un vecino, se complica la cosa");
 			neighbors.add(node);
-			node.getAddress().addNode(this.node);
+			send(new PacketAddNode(address, node.getAddress(), this.node));
 			
 			// por un lado, habrá que notificar a vecinos ya existentes
-			for (Node<DHT> neighbor : neighbors) {
-				DHT neighborDHT = neighbor.getAddress();
+			for (Node<Address> neighbor : neighbors) {
 				System.out.println("    notifico a vecino existente");
-				neighborDHT.addNode(node);
+				send(new PacketAddNode(address, neighbor.getAddress(), node));
 			}
-			
-			/* TODO: Ya los quito en neighbors.add(node)
-			// por otro lado hay que decirle a un vecino que deja de ser vecino
-			if (neighbors.firstKey() < k) {
-				// quitamos l_low
-				System.out.println("    quito vecino l_low");
-				neighbors.remove(neighbors.firstKey());
-			}
-			else {
-				// quitamos l_high
-				System.out.println("    quito vecino l_high");
-				neighbors.remove(neighbors.lastKey());
-			}
-			*/
 		}
 		else {
 			// escurrimos el bulto
 			System.out.println("  escurrimos el bulto");
-			DHT neighborDHT = neighbors.last().getAddress();
-			neighborDHT.addNode(node);	
+			send(new PacketAddNode(address, neighbors.last().getAddress(), node));
 		}
 
 		System.out.println(String.format("%d -> %s", this.node.getKey(), this.printNeighbors()));
