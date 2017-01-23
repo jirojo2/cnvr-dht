@@ -1,8 +1,9 @@
 package es.upm.dit.cnvr.dht;
 
+import java.io.Serializable;
 import org.jgroups.Address;
 
-public class PacketAddNode implements Packet {
+public class PacketAddNode implements Packet, Serializable {
 	public static final int ID = Packet.PACKET_ADD_NODE;
 
 	private Address src;

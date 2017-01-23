@@ -1,6 +1,8 @@
 package es.upm.dit.cnvr.dht;
 
-public class Node<Address> {
+import java.io.Serializable;
+
+public class Node<Address> implements Serializable {
 
 	private Address address;
 	private Integer key;

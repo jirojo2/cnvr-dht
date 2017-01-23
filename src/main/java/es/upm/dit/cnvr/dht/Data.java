@@ -1,6 +1,8 @@
 package es.upm.dit.cnvr.dht;
 
-public class Data {
+import java.io.Serializable;
+
+public class Data implements Serializable {
 	
 	private Object value;
 	private Integer key;

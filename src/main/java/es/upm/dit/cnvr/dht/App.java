@@ -17,7 +17,7 @@ public class App
 		
 		try {
 			DHT master = new DHT(); // esto en realidad define de forma implicita un nodo
-			master.addNode(master.getNode());
+			master.addSelf();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

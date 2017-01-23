@@ -1,8 +1,10 @@
 package es.upm.dit.cnvr.dht;
 
+import java.io.Serializable;
+
 import org.jgroups.Address;
 
-public class PacketSetData implements Packet {
+public class PacketSetData implements Packet, Serializable {
 	public static final int ID = Packet.PACKET_SET_DATA;
 
 	private Address src;

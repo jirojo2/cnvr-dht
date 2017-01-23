@@ -1,6 +1,5 @@
 package es.upm.dit.cnvr.dht;
 
-import java.security.spec.EllipticCurve;
 import java.util.HashMap;
 import org.jgroups.Address;
 import org.jgroups.JChannel;
@@ -27,10 +26,10 @@ public class DHT extends ReceiverAdapter {
 	public DHT() throws Exception {
 		channel = new JChannel();
 		channel.setReceiver(this);
+		channel.connect(JGROUPS_CLUSTER);
 		this.address = channel.getAddress();
 		this.node = new Node<Address>(address);
 		this.neighbors = new NeighborVector(this.node.getKey());
-		channel.connect(JGROUPS_CLUSTER);
 	}
 
 	public void close() {
@@ -53,18 +52,14 @@ public class DHT extends ReceiverAdapter {
 	}
 
 	private void handle(PacketDataRequest pkt) {
-		if (pkt.getDst() == null || pkt.getDst().equals(address)) {
-			Data data = getData(pkt.getKey());
-			if (data != null) {
-				requestingData = data;
-			}
+		Data data = getData(pkt.getKey());
+		if (data != null) {
+			requestingData = data;
 		}
 	}
 
 	private void handle(PacketDataResponse pkt) {
-		if (pkt.getDst() == null || pkt.getDst().equals(address)) {
-			requestingData = pkt.getData();
-		}
+		requestingData = pkt.getData();
 	}
 
 	private void handle(PacketAddNode pkt) {
@@ -209,6 +204,11 @@ public class DHT extends ReceiverAdapter {
 			}
 			return requestingData;
 		}
+	}
+
+	public void addSelf() {
+		Address coordinator = channel.getView().getMembers().get(0);
+		send(new PacketAddNode(address, coordinator, node));
 	}
 	
 	public void addNode(Node<Address> node) {
