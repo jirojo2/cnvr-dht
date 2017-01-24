@@ -196,7 +196,7 @@ public class DHT extends ReceiverAdapter {
 			// si está entre los vecinos... lo tengo yo
 			return dataset.get(key);
 		}
-		else if (dataset.get(key) != null) {
+		else if (neighbors.size() < 2*L) {
 			return dataset.get(key);
 		}
 		else {
@@ -224,7 +224,7 @@ public class DHT extends ReceiverAdapter {
 		if (k == this.node.getKey() || neighbors.containsKey(k)) {
 			// no hacemos nada ni avisamos a nadie
 			// punto de parada de recursividad
-			System.out.println("  no hacemos nada ni avisamos a nadie");
+			// System.out.println("  no hacemos nada ni avisamos a nadie");
 		}
 		else if (neighbors.size() < 2*L) {
 			// es vecino seguro

@@ -38,9 +38,4 @@ public class PacketSetData implements Packet, Serializable {
 	public Data getData() {
 		return data;
 	}
-
-	@Override
-	public String toString() {
-		return String.format("%s: %d -> %s", dst.toString(), key.toString(), data.toString());
-	}
 }

@@ -34,19 +34,28 @@ public class App
 				
 				String option = reader.next();
 				Data data = null;
+				int key = 0;
 			
 				switch (option) {
 					case "1": System.out.println("Introduzca el dato:\n");
 							  String dataString = reader.next();
 							  data = new Data(dataString);
-							  System.out.printf("La calve del dato es %d\n\n", data.getKey());
+							  System.out.printf("La clave del dato es: %d\n\n", data.getKey());
 							  master.putData(data);
 							  break;
 					case "2": System.out.println("Introduzca la clave del dato que desea obtener:\n");
 							  String dataKey = reader.next();
-							  int key = Integer.parseInt(dataKey);
-							  data = master.getData(key);
-							  System.out.printf("El dato obtenido es %s\n\n", data.getValue());
+							  try {
+								  key = Integer.parseInt(dataKey);
+								  data = master.getData(key);
+								  if (data != null)
+									  System.out.printf("El dato obtenido es <<%s>>\n\n", data.getValue());
+								  else
+									  System.out.println("No existe el dato solicitado.");
+							  } catch (NumberFormatException nfe) {
+								  System.out.println("Introduzca una clave numérica válida.");
+								  //nfe.printStackTrace();
+							  }
 							  break;
 					case "3": System.out.println("Añadiendo un nuevo nodo:");
 							  DHT other = new DHT();

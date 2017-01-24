@@ -49,9 +49,4 @@ public class PacketStep implements Packet, Serializable {
 	public Boolean isLocal() {
 		return local;
 	}
-
-	@Override
-	public String toString() {
-		return String.format("%s: %d -> %s", dst.toString(), key.toString(), data.toString());
-	}
 }
