@@ -43,6 +43,8 @@ public class NeighborVector implements Iterable<Node<Address>> {
 	}
 	
 	public int firstKey() {
+		if (ccwLeaf.isEmpty())
+			return Integer.MAX_VALUE;
 		return ccwLeaf.getLast().getKey();
 	}
 	
@@ -51,6 +53,8 @@ public class NeighborVector implements Iterable<Node<Address>> {
 	}
 
 	public int lastKey() {
+		if (cwLeaf.isEmpty())
+			return Integer.MIN_VALUE;
 		return cwLeaf.getLast().getKey();
 	}
 	

@@ -161,6 +161,9 @@ public class DHT extends ReceiverAdapter {
 			// y replicamos en vecinos (realmente enviamos un mensaje a cada nodo vecino)
 			putDataHere(data);
 		}
+		else if (neighbors.size() < 2*L) {
+			putDataHere(data);
+		}
 		else if (neighbors.containsKey(k)) {
 			// escurrimos el bulto
 			send(new PacketStep(address, neighbors.get(k).getAddress(), k, data));
@@ -191,6 +194,9 @@ public class DHT extends ReceiverAdapter {
 
 		if (l_low < key && key < l_high) {
 			// si está entre los vecinos... lo tengo yo
+			return dataset.get(key);
+		}
+		else if (dataset.get(key) != null) {
 			return dataset.get(key);
 		}
 		else {
